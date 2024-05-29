@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+/**
+ * Service class for managing employees.
+ */
 @Service
 @AllArgsConstructor
 public class EmployeeService {
@@ -23,6 +26,13 @@ public class EmployeeService {
     private final EmployeeMapper employeeMapper;
     private final DepartmentService departmentService;
 
+    /**
+     * Retrieves a list of employees by department name.
+     *
+     * @param department the name of the department
+     * @return a list of EmployeeDTOs
+     * @throws EmployeeNotFoundException if no employees are found in the specified department
+     */
     public List<EmployeeDTO> getEmployeesByDepartment(String department) {
         List<Employee> employees = employeeRepository.findByDepartmentName(department);
         return Optional.ofNullable(employees)
@@ -33,10 +43,19 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieves a list of employees by their salary.
+     *
+     * @param salary        the salary threshold
+     * @param isGreaterThan if true, retrieves employees with salary greater than the specified value;
+     *                      if false, retrieves employees with salary less than the specified value
+     * @return a list of EmployeeDTOs
+     * @throws EmployeeNotFoundException if no employees are found matching the criteria
+     */
     public List<EmployeeDTO> getEmployeesBySalary(Double salary, boolean isGreaterThan) {
         List<Employee> employees = isGreaterThan ?
                 employeeRepository.findBySalaryGreaterThan(salary) :
-                employeeRepository.findBySalaryLessThan(salary);
+                employeeRepository.findBySalaryLessThanEqual(salary);
 
         return Optional.ofNullable(employees)
                 .filter(empList -> !empList.isEmpty())
@@ -46,6 +65,12 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Retrieves all employees.
+     *
+     * @return a list of EmployeeDTOs
+     * @throws EmployeeNotFoundException if no employees are found
+     */
     public List<EmployeeDTO> getAllEmployees() {
         List<Employee> employees = employeeRepository.findAll();
         return Optional.ofNullable(employees)
@@ -56,6 +81,12 @@ public class EmployeeService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Saves a new employee.
+     *
+     * @param employeeDTO the employee data transfer object
+     * @throws DuplicateEmployeeException if an employee with the same name already exists in the department
+     */
     @Transactional
     public void saveEmployee(EmployeeDTO employeeDTO) {
         Department department = departmentService.findByName(employeeDTO.getDepartment());

@@ -93,7 +93,7 @@ class EmployeeServiceTest {
 
     @Test
     void testGetEmployeesBySalaryLessThan() {
-        when(employeeRepository.findBySalaryLessThan(50000.0)).thenReturn(Collections.singletonList(employee));
+        when(employeeRepository.findBySalaryLessThanEqual(50000.0)).thenReturn(Collections.singletonList(employee));
         when(employeeMapper.employeeToEmployeeDTO(employee)).thenReturn(employeeDTO);
 
         List<EmployeeDTO> employeeDTOs = employeeService.getEmployeesBySalary(50000.0, false);
@@ -101,7 +101,7 @@ class EmployeeServiceTest {
         assertNotNull(employeeDTOs);
         assertEquals(1, employeeDTOs.size());
         assertEquals(employeeDTO, employeeDTOs.get(0));
-        verify(employeeRepository, times(1)).findBySalaryLessThan(50000.0);
+        verify(employeeRepository, times(1)).findBySalaryLessThanEqual(50000.0);
     }
 
     @Test
