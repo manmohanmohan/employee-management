@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
-    List<Employee> findByDepartmentName(String departmentName);
+    Optional<List<Employee>> findByDepartmentName(String departmentName);
 
-    List<Employee> findBySalaryGreaterThan(double salary);
+    Optional<List<Employee>> findBySalaryGreaterThan(double salary);
 
-    List<Employee> findBySalaryLessThanEqual(double salary);
+    Optional<List<Employee>> findBySalaryLessThanEqual(double salary);
 
     Optional<Employee> findByNameAndDepartment(String name, Department department);
 

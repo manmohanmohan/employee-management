@@ -8,8 +8,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-@AllArgsConstructor
-@NoArgsConstructor
 public class EmployeeDTO {
     private String name;
     private String department;
