@@ -4,6 +4,7 @@ import com.example.employee_management.dto.EmployeeDTO;
 import com.example.employee_management.entity.Department;
 import com.example.employee_management.entity.Employee;
 import com.example.employee_management.exception.DuplicateEmployeeException;
+import com.example.employee_management.exception.EmployeeNotFoundException;
 import com.example.employee_management.mapper.EmployeeMapper;
 import com.example.employee_management.repository.EmployeeRepository;
 import jakarta.transaction.Transactional;
@@ -90,6 +91,12 @@ public class EmployeeService {
         return employees.stream()
                 .map(employeeMapper::employeeToEmployeeDTO)
                 .collect(Collectors.toList());
+    }
+
+    public EmployeeDTO getEmployeeById(long employeeId) {
+        Employee employee= employeeRepository.findById(employeeId)
+                .orElseThrow(()->new EmployeeNotFoundException("Employee not found"));
+        return employeeMapper.employeeToEmployeeDTO(employee);
     }
 
 }

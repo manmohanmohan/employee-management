@@ -2,7 +2,9 @@ package com.example.employee_management.controller;
 
 import com.example.employee_management.dto.EmployeeDTO;
 import com.example.employee_management.service.EmployeeService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +42,7 @@ public class EmployeeController {
      * @return a ResponseEntity indicating the status of the operation.
      */
     @PostMapping("/employees")
-    public ResponseEntity<String> saveEmployee(@RequestBody EmployeeDTO employeeDTO) {
+    public ResponseEntity<String> saveEmployee(@Valid @RequestBody  EmployeeDTO employeeDTO) {
         employeeService.saveEmployee(employeeDTO);
         return new ResponseEntity<>("Employee details have been saved successfully.", HttpStatus.CREATED);
     }
@@ -71,5 +73,12 @@ public class EmployeeController {
             @RequestParam(defaultValue = "true") boolean isGreaterThan){
             List<EmployeeDTO> employees = employeeService.getEmployeesBySalary(salary, isGreaterThan);
         return new ResponseEntity<>(employees, HttpStatus.OK);
+    }
+
+
+    @GetMapping("/employees/{id}")
+    public ResponseEntity<EmployeeDTO> getEmployeesById(@PathVariable long id){
+        EmployeeDTO employee = employeeService.getEmployeeById(id);
+        return new ResponseEntity<>(employee, HttpStatus.OK);
     }
 }

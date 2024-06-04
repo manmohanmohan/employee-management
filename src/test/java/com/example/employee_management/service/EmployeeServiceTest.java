@@ -4,6 +4,7 @@ import com.example.employee_management.dto.EmployeeDTO;
 import com.example.employee_management.entity.Department;
 import com.example.employee_management.entity.Employee;
 import com.example.employee_management.exception.DuplicateEmployeeException;
+import com.example.employee_management.exception.EmployeeNotFoundException;
 import com.example.employee_management.mapper.EmployeeMapper;
 import com.example.employee_management.repository.EmployeeRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +59,7 @@ class EmployeeServiceTest {
     void saveEmployee_shouldSaveEmployee_whenNoDuplicateExists() {
         // Given
         EmployeeDTO employeeDTO = new EmployeeDTO();
-        employeeDTO.setName("John Doe");
+        employeeDTO.setName("Sachin");
         employeeDTO.setDepartment("IT");
         Department department = new Department();
         department.setName("IT");
@@ -77,7 +78,7 @@ class EmployeeServiceTest {
     void saveEmployee_shouldThrowDuplicateEmployeeException_whenDuplicateExists() {
         // Given
         EmployeeDTO employeeDTO = new EmployeeDTO();
-        employeeDTO.setName("John Doe");
+        employeeDTO.setName("Sachin");
         employeeDTO.setDepartment("IT");
 
         Department department = new Department();
@@ -88,7 +89,7 @@ class EmployeeServiceTest {
         // Mocking the existing employee
         Employee existingEmployee = new Employee();
         existingEmployee.setDepartment(department);
-        existingEmployee.setName("John Doe");
+        existingEmployee.setName("Sachin");
         when(employeeRepository.findByNameAndDepartment(anyString(),any(Department.class))).thenReturn(Optional.of(existingEmployee));
 
         // When, Then
@@ -148,5 +149,34 @@ class EmployeeServiceTest {
         assertEquals(1, employeeDTOs.size());
     }
 
+    @Test
+    void getEmployeeById_shouldReturnEmployeeDTO(){
+        long empId=123;
+        Employee employee = new Employee();
+        employee.setId(123L);
+        employee.setName("MS Dhoni");
+        Department department = new Department();
+        department.setName("IT");
+        employee.setDepartment(department);
+
+
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+        employeeDTO.setName("MS Dhoni");
+        employeeDTO.setDepartment("IT");
+        when(employeeRepository.findById(empId)).thenReturn(Optional.of(employee));
+        when(employeeMapper.employeeToEmployeeDTO(any(Employee.class))).thenReturn(employeeDTO);
+        EmployeeDTO response = employeeService.getEmployeeById(empId);
+
+        assertEquals(employeeDTO.getName(),response.getName());
+        assertEquals(employeeDTO.getDepartment(),response.getDepartment());
+
+    }
+
+    @Test
+    void getEmployeeById_shouldThrowNotFoundException(){
+        long empId=123;
+        when(employeeRepository.findById(empId)).thenReturn(Optional.ofNullable(null));
+        assertThrows( EmployeeNotFoundException.class,()->employeeService.getEmployeeById(empId));
+    }
 
 }
