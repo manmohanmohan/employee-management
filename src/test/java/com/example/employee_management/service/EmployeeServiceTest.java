@@ -9,21 +9,17 @@ import com.example.employee_management.mapper.EmployeeMapper;
 import com.example.employee_management.repository.EmployeeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class EmployeeServiceTest {
 
     @Mock
@@ -38,119 +34,149 @@ class EmployeeServiceTest {
     @InjectMocks
     private EmployeeService employeeService;
 
-    private Employee employee;
-    private EmployeeDTO employeeDTO;
-    private Department department;
-
     @BeforeEach
     void setUp() {
-        department = new Department();
-        department.setName("Engineering");
-
-        employee = new Employee();
-        employee.setName("John Doe");
-        employee.setSalary(50000.0);
-        employee.setDepartment(department);
-
-        employeeDTO = new EmployeeDTO();
-        employeeDTO.setName("John Doe");
-        employeeDTO.setSalary(50000.0);
-        employeeDTO.setDepartment("Engineering");
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void testGetEmployeesByDepartment() {
-        when(employeeRepository.findByDepartmentName("Engineering")).thenReturn(Collections.singletonList(employee));
-        when(employeeMapper.employeeToEmployeeDTO(employee)).thenReturn(employeeDTO);
+    void getAllEmployees_shouldReturnListOfEmployeesDTO() {
+        // Given
+        List<Employee> employees = new ArrayList<>();
+        employees.add(new Employee());
+        when(employeeRepository.findAll()).thenReturn(employees);
+        when(employeeMapper.employeeToEmployeeDTO(any(Employee.class))).thenReturn(new EmployeeDTO());
 
-        List<EmployeeDTO> employeeDTOs = employeeService.getEmployeesByDepartment("Engineering");
-
-        assertNotNull(employeeDTOs);
-        assertEquals(1, employeeDTOs.size());
-        assertEquals(employeeDTO, employeeDTOs.get(0));
-        verify(employeeRepository, times(1)).findByDepartmentName("Engineering");
-    }
-
-    @Test
-    void testGetEmployeesByDepartmentThrowsException() {
-        when(employeeRepository.findByDepartmentName("Engineering")).thenReturn(Collections.emptyList());
-
-        assertThrows(EmployeeNotFoundException.class, () -> employeeService.getEmployeesByDepartment("Engineering"));
-    }
-
-    @Test
-    void testGetEmployeesBySalaryGreaterThan() {
-        when(employeeRepository.findBySalaryGreaterThan(50000.0)).thenReturn(Collections.singletonList(employee));
-        when(employeeMapper.employeeToEmployeeDTO(employee)).thenReturn(employeeDTO);
-
-        List<EmployeeDTO> employeeDTOs = employeeService.getEmployeesBySalary(50000.0, true);
-
-        assertNotNull(employeeDTOs);
-        assertEquals(1, employeeDTOs.size());
-        assertEquals(employeeDTO, employeeDTOs.get(0));
-        verify(employeeRepository, times(1)).findBySalaryGreaterThan(50000.0);
-    }
-
-    @Test
-    void testGetEmployeesBySalaryLessThan() {
-        when(employeeRepository.findBySalaryLessThan(50000.0)).thenReturn(Collections.singletonList(employee));
-        when(employeeMapper.employeeToEmployeeDTO(employee)).thenReturn(employeeDTO);
-
-        List<EmployeeDTO> employeeDTOs = employeeService.getEmployeesBySalary(50000.0, false);
-
-        assertNotNull(employeeDTOs);
-        assertEquals(1, employeeDTOs.size());
-        assertEquals(employeeDTO, employeeDTOs.get(0));
-        verify(employeeRepository, times(1)).findBySalaryLessThan(50000.0);
-    }
-
-    @Test
-    void testGetEmployeesBySalaryThrowsException() {
-        when(employeeRepository.findBySalaryGreaterThan(50000.0)).thenReturn(Collections.emptyList());
-
-        assertThrows(EmployeeNotFoundException.class, () -> employeeService.getEmployeesBySalary(50000.0, true));
-    }
-
-    @Test
-    void testGetAllEmployees() {
-        when(employeeRepository.findAll()).thenReturn(Collections.singletonList(employee));
-        when(employeeMapper.employeeToEmployeeDTO(employee)).thenReturn(employeeDTO);
-
+        // When
         List<EmployeeDTO> employeeDTOs = employeeService.getAllEmployees();
 
+        // Then
         assertNotNull(employeeDTOs);
         assertEquals(1, employeeDTOs.size());
-        assertEquals(employeeDTO, employeeDTOs.get(0));
-        verify(employeeRepository, times(1)).findAll();
     }
 
     @Test
-    void testGetAllEmployeesThrowsException() {
-        when(employeeRepository.findAll()).thenReturn(Collections.emptyList());
+    void saveEmployee_shouldSaveEmployee_whenNoDuplicateExists() {
+        // Given
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+        employeeDTO.setName("Sachin");
+        employeeDTO.setDepartment("IT");
+        Department department = new Department();
+        department.setName("IT");
+        when(departmentService.findByName("IT")).thenReturn(department);
+        when(employeeRepository.findByNameAndDepartment(anyString(), any(Department.class))).thenReturn(Optional.empty());
+        when(employeeMapper.employeeDTOToEmployee(employeeDTO)).thenReturn(new Employee());
 
-        assertThrows(EmployeeNotFoundException.class, () -> employeeService.getAllEmployees());
+        // When
+        assertDoesNotThrow(() -> employeeService.saveEmployee(employeeDTO));
+
+        // Then
+        verify(employeeRepository, times(1)).save(any(Employee.class));
     }
 
     @Test
-    void testSaveEmployee() {
-        when(departmentService.findByName("Engineering")).thenReturn(department);
+    void saveEmployee_shouldThrowDuplicateEmployeeException_whenDuplicateExists() {
+        // Given
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+        employeeDTO.setName("Sachin");
+        employeeDTO.setDepartment("IT");
+
+        Department department = new Department();
+        department.setName("IT");
+
+        when(departmentService.findByName("IT")).thenReturn(department);
         when(departmentService.saveDepartment(any(Department.class))).thenReturn(department);
-        when(employeeMapper.employeeDTOToEmployee(employeeDTO)).thenReturn(employee);
+        // Mocking the existing employee
+        Employee existingEmployee = new Employee();
+        existingEmployee.setDepartment(department);
+        existingEmployee.setName("Sachin");
+        when(employeeRepository.findByNameAndDepartment(anyString(),any(Department.class))).thenReturn(Optional.of(existingEmployee));
 
-        employeeService.saveEmployee(employeeDTO);
-
-        ArgumentCaptor<Employee> employeeArgumentCaptor = ArgumentCaptor.forClass(Employee.class);
-        verify(employeeRepository).save(employeeArgumentCaptor.capture());
-        assertEquals(employee.getName(), employeeArgumentCaptor.getValue().getName());
-        assertEquals(department, employeeArgumentCaptor.getValue().getDepartment());
-    }
-
-    @Test
-    void testSaveEmployeeThrowsDuplicateException() {
-        when(departmentService.findByName("Engineering")).thenReturn(department);
-        when(departmentService.saveDepartment(any(Department.class))).thenReturn(department);
-        when(employeeRepository.findByNameAndDepartment(employeeDTO.getName(), department)).thenReturn(Optional.of(employee));
-
+        // When, Then
         assertThrows(DuplicateEmployeeException.class, () -> employeeService.saveEmployee(employeeDTO));
+        verify(employeeRepository, never()).save(any(Employee.class));
     }
+
+
+    @Test
+    void getEmployeesByDepartment_shouldReturnListOfEmployeesDTO() {
+        // Given
+        String departmentName = "IT";
+        List<Employee> employees = new ArrayList<>();
+        employees.add(new Employee());
+        when(employeeRepository.findByDepartmentName(departmentName)).thenReturn(Optional.of(employees));
+        when(employeeMapper.employeeToEmployeeDTO(any(Employee.class))).thenReturn(new EmployeeDTO());
+
+        // When
+        List<EmployeeDTO> employeeDTOs = employeeService.getEmployeesByDepartment(departmentName);
+
+        // Then
+        assertNotNull(employeeDTOs);
+        assertEquals(1, employeeDTOs.size());
+    }
+
+    @Test
+    void getEmployeesBySalary_shouldReturnListOfEmployeesDTO_whenSalaryIsGreaterThan() {
+        // Given
+        double salary = 50000;
+        List<Employee> employees = new ArrayList<>();
+        employees.add(new Employee());
+        when(employeeRepository.findBySalaryGreaterThan(salary)).thenReturn(Optional.of(employees));
+        when(employeeMapper.employeeToEmployeeDTO(any(Employee.class))).thenReturn(new EmployeeDTO());
+
+        // When
+        List<EmployeeDTO> employeeDTOs = employeeService.getEmployeesBySalary(salary, true);
+
+        // Then
+        assertNotNull(employeeDTOs);
+        assertEquals(1, employeeDTOs.size());
+    }
+
+    @Test
+    void getEmployeesBySalary_shouldReturnListOfEmployeesDTO_whenSalaryIsLessThanOrEqual() {
+        // Given
+        double salary = 50000;
+        List<Employee> employees = new ArrayList<>();
+        employees.add(new Employee());
+        when(employeeRepository.findBySalaryLessThanEqual(salary)).thenReturn(Optional.of(employees));
+        when(employeeMapper.employeeToEmployeeDTO(any(Employee.class))).thenReturn(new EmployeeDTO());
+
+        // When
+        List<EmployeeDTO> employeeDTOs = employeeService.getEmployeesBySalary(salary, false);
+
+        // Then
+        assertNotNull(employeeDTOs);
+        assertEquals(1, employeeDTOs.size());
+    }
+
+    @Test
+    void getEmployeeById_shouldReturnEmployeeDTO(){
+        long empId=123;
+        Employee employee = new Employee();
+        employee.setId(123L);
+        employee.setName("MS Dhoni");
+        Department department = new Department();
+        department.setName("IT");
+        employee.setDepartment(department);
+
+
+        EmployeeDTO employeeDTO = new EmployeeDTO();
+        employeeDTO.setName("MS Dhoni");
+        employeeDTO.setDepartment("IT");
+        when(employeeRepository.findById(empId)).thenReturn(Optional.of(employee));
+        when(employeeMapper.employeeToEmployeeDTO(any(Employee.class))).thenReturn(employeeDTO);
+        EmployeeDTO response = employeeService.getEmployeeById(empId);
+
+        assertEquals(employeeDTO.getName(),response.getName());
+        assertEquals(employeeDTO.getDepartment(),response.getDepartment());
+
+    }
+
+    @Test
+    void getEmployeeById_shouldThrowNotFoundException(){
+        long empId=123;
+        when(employeeRepository.findById(empId)).thenReturn(Optional.ofNullable(null));
+        assertThrows( EmployeeNotFoundException.class,()->employeeService.getEmployeeById(empId));
+    }
+
 }

@@ -1,32 +1,35 @@
 package com.example.employee_management.controller;
 
 import com.example.employee_management.dto.EmployeeDTO;
-import com.example.employee_management.entity.Employee;
-import com.example.employee_management.exception.DuplicateEmployeeException;
 import com.example.employee_management.exception.EmployeeNotFoundException;
 import com.example.employee_management.exception.GlobalExceptionHandler;
 import com.example.employee_management.service.EmployeeService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-
-@SpringBootTest
-public class EmployeeControllerTest {
-    private MockMvc mockMvc;
+@ExtendWith(MockitoExtension.class)
+class EmployeeControllerTest {
 
     @Mock
     private EmployeeService employeeService;
@@ -34,149 +37,223 @@ public class EmployeeControllerTest {
     @InjectMocks
     private EmployeeController employeeController;
 
+    private MockMvc mockMvc;
+
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new EmployeeController(employeeService))
+        mockMvc = MockMvcBuilders.standaloneSetup(employeeController)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    // Success test cases for each endpoint
 
     @Test
-    public void testGetEmployeesByDepartment_success() throws Exception {
-        String departmentName = "IT";
-        List<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(), new EmployeeDTO());
+    @DisplayName("Get all employees")
+    void getAllEmployees_Success() throws Exception {
+        // Mocking the service response
+        when(employeeService.getAllEmployees()).thenReturn(Collections.emptyList());
 
-        when(employeeService.getEmployeesByDepartment(departmentName)).thenReturn(employees);
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/employee/by-department")
-                        .param("departmentName", departmentName))
+        // Performing the request and asserting the response
+        mockMvc.perform(get("/api/employees"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 
     @Test
-    public void testGetEmployeesByDepartment_NotFound() throws Exception {
-        String departmentName = "IT";
-        List<Employee> employees = Arrays.asList(new Employee(), new Employee());
-
-        when(employeeService.getEmployeesByDepartment(departmentName))
-                .thenThrow(new EmployeeNotFoundException("No employees found in department: " + departmentName));
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/employee/by-department")
-                        .param("departmentName", departmentName))
-                .andExpect(status().isNotFound())
-                .andExpect(content().string("No employees found in department: " + departmentName));
-    }
-
-    @Test
-    public void testGetEmployeesByGreaterThanSalary() throws Exception {
-        double salary = 50000.0;
-        List<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(), new EmployeeDTO());
-
-        when(employeeService.getEmployeesBySalary(salary,true))
-                .thenThrow(new EmployeeNotFoundException("No employees found earning more than: " + salary));
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/employee/by-salary")
-                        .param("salary", String.valueOf(salary))
-                        .param("isGreaterThan", String.valueOf(true)))
-                .andExpect(status().isNotFound())
-                .andExpect(content().string("No employees found earning more than: " + salary));
-    }
-
-    @Test
-    public void testGetEmployeesBySalary_notFound() throws Exception {
-        double salary = 50000.0;
-        List<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(), new EmployeeDTO());
-
-        when(employeeService.getEmployeesBySalary(salary,true)).thenReturn(employees);
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/employee/by-salary")
-                        .param("salary", String.valueOf(salary))
-                        .param("isGreaterThan", String.valueOf(true)))
-
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray());
-    }
-
-
-    @Test
-    public void testGetAllEmployees() throws Exception {
-        List<EmployeeDTO> employees = Arrays.asList(new EmployeeDTO(), new EmployeeDTO());
-
-        when(employeeService.getAllEmployees()).thenReturn(employees);
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/employee"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray());
-    }
-
-    @Test
-    public void testSaveEmployee() throws Exception {
-        EmployeeDTO employeeDTO = new EmployeeDTO();
-        employeeDTO.setName("John Doe");
-        employeeDTO.setDepartment("IT");
-        employeeDTO.setSalary(60000.0);
-
-        //when(employeeService.saveEmployee(any(EmployeeDTO.class))).thenReturn(true);
-
+    @DisplayName("Save employee details")
+    void saveEmployee_Success() throws Exception {
+        // Mocking the service response
         doNothing().when(employeeService).saveEmployee(any(EmployeeDTO.class));
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/employee/save")
+        // Performing the request and asserting the response
+        mockMvc.perform(post("/api/employees")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                    {
-                                    "name": "John Doe", 
-                                    "department": "IT", 
-                                    "salary": 60000.0 
-                                    }
-                                    """))
+                                { "name" : "Sachin" , "department": "IT", "salary": 50000}
+                                """))
                 .andExpect(status().isCreated());
     }
 
     @Test
-    public void testSaveEmployee_DuplicateEmployee() throws Exception {
-        EmployeeDTO employeeDTO = new EmployeeDTO();
-        employeeDTO.setName("John Doe");
-        employeeDTO.setDepartment("IT");
-        employeeDTO.setSalary(60000.0);
+    @DisplayName("Get employees by valid department name")
+    void getEmployeesByDepartment_Success() throws Exception {
+        // Mocking the service response
+        when(employeeService.getEmployeesByDepartment(anyString())).thenReturn(Collections.emptyList());
 
-        // when(employeeService.saveEmployee(any(EmployeeDTO.class))).thenThrow(new RuntimeException());
-
-        doThrow(new DuplicateEmployeeException("Duplicate Employee"+employeeDTO.getName())).when(employeeService).saveEmployee(any(EmployeeDTO.class));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/employee/save")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                    {
-                                    "name": "John Doe", 
-                                    "department": "IT", 
-                                    "salary": 60000.0 
-                                    }
-                                    """))
-                .andExpect(status().isConflict())
-                .andExpect(content().string("Duplicate Employee"+employeeDTO.getName()));
+        // Performing the request and asserting the response
+        mockMvc.perform(get("/api/departments/IT/employees"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 
     @Test
-    public void testSaveEmployee_Error() throws Exception {
-        EmployeeDTO employeeDTO = new EmployeeDTO();
-        employeeDTO.setName("John Doe");
-        employeeDTO.setDepartment("IT");
-        employeeDTO.setSalary(60000.0);
+    @DisplayName("Get employees by salary greater than: Empty ")
+    void getEmployeesBySalaryGreaterThan_Success_Case1() throws Exception {
+        // Creating sample EmployeeDTO objects
+        EmployeeDTO employee1 = new EmployeeDTO("John Doe", "Engineering", 60000);
+        EmployeeDTO employee2 = new EmployeeDTO("Jane Smith", "Marketing", 55000);
+        List<EmployeeDTO> employeeList = Arrays.asList(employee1, employee2);
 
-        // when(employeeService.saveEmployee(any(EmployeeDTO.class))).thenThrow(new RuntimeException());
+        // Mocking the service response to return a list of two EmployeeDTO objects
+        when(employeeService.getEmployeesBySalary(anyDouble(), anyBoolean())).thenReturn(employeeList);
 
-        doThrow(new RuntimeException()).when(employeeService).saveEmployee(any(EmployeeDTO.class));
+        // Performing the request and asserting the response
+        mockMvc.perform(get("/api/employees/salary")
+                        .param("salary", "50000")
+                        .param("isGreaterThan", "true"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].name").value("John Doe"))
+                .andExpect(jsonPath("$[0].department").value("Engineering"))
+                .andExpect(jsonPath("$[0].salary").value(60000))
+                .andExpect(jsonPath("$[1].name").value("Jane Smith"))
+                .andExpect(jsonPath("$[1].department").value("Marketing"))
+                .andExpect(jsonPath("$[1].salary").value(55000));
+    }
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/employee/save")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{ \"name\": \"John Doe\", \"department\": \"IT\", \"salary\": 60000.0 }"))
-                .andExpect(status().isInternalServerError());
+    @Test
+    @DisplayName("Get employees by salary greater than: Empty result")
+    void getEmployeesBySalaryGreaterThan_Success_Case2() throws Exception {
+        // Mocking the service response
+        when(employeeService.getEmployeesBySalary(anyDouble(), anyBoolean())).thenReturn(Collections.emptyList());
+
+        // Performing the request and asserting the response
+        mockMvc.perform(get("/api/employees/salary")
+                        .param("salary", "50000")
+                        .param("isGreaterThan", "true"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
     }
 
 
+
+
+    @Test
+    @DisplayName("Get employees by salary greater than")
+    void getEmployeesBySalaryLessThan_Success_Case1() throws Exception {
+        // Mocking the service response
+        EmployeeDTO employee1 = new EmployeeDTO("John Doe", "Engineering", 60000);
+        EmployeeDTO employee2 = new EmployeeDTO("Jane Smith", "Marketing", 55000);
+        List<EmployeeDTO> employeeList = Arrays.asList(employee1, employee2);
+
+        // Mocking the service response to return a list of two EmployeeDTO objects
+        when(employeeService.getEmployeesBySalary(anyDouble(), anyBoolean())).thenReturn(employeeList);
+
+        // Performing the request and asserting the response
+        mockMvc.perform(get("/api/employees/salary")
+                        .param("salary", "50000")
+                        .param("isGreaterThan", "false"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].name").value("John Doe"))
+                .andExpect(jsonPath("$[0].department").value("Engineering"))
+                .andExpect(jsonPath("$[0].salary").value(60000))
+                .andExpect(jsonPath("$[1].name").value("Jane Smith"))
+                .andExpect(jsonPath("$[1].department").value("Marketing"))
+                .andExpect(jsonPath("$[1].salary").value(55000));
+
+    }
+
+    @Test
+    @DisplayName("Get employees by salary greater than: Empty result")
+    void getEmployeesBySalaryLessThan_Success_Case2() throws Exception {
+        // Mocking the service response
+        when(employeeService.getEmployeesBySalary(anyDouble(), anyBoolean())).thenReturn(Collections.emptyList());
+
+        // Performing the request and asserting the response
+        mockMvc.perform(get("/api/employees/salary")
+                        .param("salary", "50000")
+                        .param("isGreaterThan", "false"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void getEmployeesById_Success() throws Exception {
+        // Mocking the service response
+        EmployeeDTO mockEmployee = new EmployeeDTO("Sachin", "IT", 50000);
+        when(employeeService.getEmployeeById(anyLong())).thenReturn(mockEmployee);
+
+        // Performing the request and asserting the response
+        mockMvc.perform(get("/api/employees/1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.name").value("Sachin"))
+                .andExpect(jsonPath("$.department").value("IT"))
+                .andExpect(jsonPath("$.salary").value(50000));
+    }
+
+    // Failure test cases for each endpoint
+
+    @Test
+    void saveEmployee_Failure_InvalidInput() throws Exception {
+        // Performing the request with invalid input and expecting bad request status
+        mockMvc.perform(post("/api/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "name" : " " , "department": "IT", "salary": 50000}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void saveEmployee_Failure_InvalidJsonSyntax() throws Exception {
+        // Performing the request with invalid input and expecting bad request status
+        mockMvc.perform(post("/api/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "name" :  "department": "IT", "salary": 50000}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getEmployeesByDepartment_Failure_DepartmentNameEmpty() throws Exception {
+        // Performing the request with empty department name and expecting bad request status
+        mockMvc.perform(get("/api/departments//employees"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void getEmployeesBySalary_Failure_InvalidSalary() throws Exception {
+        // Performing the request with invalid salary value and expecting bad request status
+        mockMvc.perform(get("/api/employees/salary")
+                        .param("salary", "invalid")
+                        .param("isGreaterThan", "true"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getEmployeesById_Failure_NotFound() throws Exception {
+        // Mocking the service response with EmployeeNotFoundException
+        when(employeeService.getEmployeeById(anyLong())).thenThrow(new EmployeeNotFoundException("Employee not found"));
+
+        // Performing the request and expecting not found status
+        mockMvc.perform(get("/api/employees/1"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getEmployeesById_Failure_MethodArgumentTypeMismatch() throws Exception {
+        // Mocking the service response with MethodArgumentTypeMismatchException
+        when(employeeService.getEmployeeById(anyLong())).thenThrow(new MethodArgumentTypeMismatchException(1L, Long.class, "id", null, null));
+
+        // Performing the request and expecting bad request status
+        mockMvc.perform(get("/api/employees/1"))
+                .andExpect(status().isBadRequest());
+    }
 }
